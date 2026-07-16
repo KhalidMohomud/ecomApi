@@ -18,7 +18,7 @@ import (
 // test can later assert the lookup fails once the session is revoked.
 func createTestSession(t *testing.T, repo *fakeRefreshTokenRepository, userID uuid.UUID) string {
 	t.Helper()
-	raw, hash, err := utils.GenerateRefreshToken()
+	_, hash, err := utils.GenerateRefreshToken()
 	require.NoError(t, err)
 
 	err = repo.Create(context.Background(), &entity.RefreshToken{

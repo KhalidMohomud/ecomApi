@@ -80,18 +80,29 @@ func run() error {
 	// with different arguments and no shared state.
 	userRepo := repository.NewUserRepository(db)
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+	brandRepo := repository.NewBrandRepository(db)
 
 	tokenManager := utils.NewTokenManager(cfg.Auth.JWTSecret, cfg.Auth.AccessTokenTTL)
 
 	authService := service.NewAuthService(userRepo, refreshTokenRepo, tokenManager, cfg.Auth.RefreshTokenTTL)
 	userService := service.NewUserService(userRepo, refreshTokenRepo)
+	adminService := service.NewAdminService(userRepo, refreshTokenRepo)
+	categoryService := service.NewCategoryService(categoryRepo)
+	brandService := service.NewBrandService(brandRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
+	adminHandler := handler.NewAdminHandler(adminService)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
+	brandHandler := handler.NewBrandHandler(brandService)
 
 	router := routes.SetupRouter(cfg, tokenManager, routes.Handlers{
-		Auth: authHandler,
-		User: userHandler,
+		Auth:     authHandler,
+		User:     userHandler,
+		Admin:    adminHandler,
+		Category: categoryHandler,
+		Brand:    brandHandler,
 	})
 
 	srv := &http.Server{

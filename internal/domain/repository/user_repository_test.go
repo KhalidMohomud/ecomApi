@@ -6,10 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/KhalidMohomud/ecomApi/internal/config"
-	"github.com/KhalidMohomud/ecomApi/internal/database"
 	"github.com/KhalidMohomud/ecomApi/internal/domain/entity"
 	"github.com/KhalidMohomud/ecomApi/internal/domain/repository"
 	"github.com/google/uuid"
@@ -30,27 +27,12 @@ import (
 // that's a sign the public API is missing something, not a reason to
 // reach around it.
 
-// newTestRepo opens a real connection using the same config package
-// production code uses, and registers cleanup to close it when the
-// test finishes. t.Helper marks this as a helper so failures report
-// the calling test's line number, not this line.
+// newTestRepo wraps the shared testDB helper (testdb_test.go) with
+// the one line specific to this file: constructing a UserRepository
+// from that connection.
 func newTestRepo(t *testing.T) repository.UserRepository {
 	t.Helper()
-
-	cfg, err := config.Load(repoRootEnvFile(t))
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	db, err := database.Connect(ctx, cfg.Database)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		require.NoError(t, database.Close(db))
-	})
-
-	return repository.NewUserRepository(db)
+	return repository.NewUserRepository(testDB(t))
 }
 
 // uniqueEmail avoids collisions between test runs (and between

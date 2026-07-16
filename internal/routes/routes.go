@@ -6,8 +6,9 @@ package routes
 import (
 	"net/http"
 
-	_ "github.com/KhalidMohomud/ecomApi/docs" // swag-generated spec; blank import runs its init(), registering the spec with gin-swagger
+	// swag-generated spec; blank import runs its init(), registering the spec with gin-swagger
 	"github.com/KhalidMohomud/ecomApi/internal/config"
+	"github.com/KhalidMohomud/ecomApi/internal/domain/entity"
 	"github.com/KhalidMohomud/ecomApi/internal/handler"
 	"github.com/KhalidMohomud/ecomApi/internal/middleware"
 	"github.com/KhalidMohomud/ecomApi/internal/utils"
@@ -21,8 +22,11 @@ import (
 // field here rather than SetupRouter growing a longer and longer
 // parameter list.
 type Handlers struct {
-	Auth *handler.AuthHandler
-	User *handler.UserHandler
+	Auth     *handler.AuthHandler
+	User     *handler.UserHandler
+	Admin    *handler.AdminHandler
+	Category *handler.CategoryHandler
+	Brand    *handler.BrandHandler
 }
 
 // SetupRouter builds the fully wired Gin engine: global middleware,
@@ -76,6 +80,49 @@ func SetupRouter(cfg *config.Config, tokenManager *utils.TokenManager, h Handler
 				users.PUT("/me/password", h.User.ChangePassword)
 				users.DELETE("/me", h.User.DeleteAccount)
 			}
+
+			// A second guard layered on top of Auth: RequireRole
+			// checks the role Auth already put on the context, so
+			// only an authenticated admin ever reaches these handlers.
+			admin := protected.Group("/admin")
+			admin.Use(middleware.RequireRole(entity.RoleAdmin))
+			{
+				admin.GET("/dashboard", h.Admin.GetDashboard)
+				admin.GET("/users", h.Admin.ListUsers)
+				admin.POST("/users/:id/block", h.Admin.BlockUser)
+				admin.POST("/users/:id/unblock", h.Admin.UnblockUser)
+				admin.DELETE("/users/:id", h.Admin.DeleteUser)
+			}
+		}
+
+		// Categories and brands take a different shape than /admin:
+		// reads and writes share the same resource path, and only the
+		// mutating verbs are protected. Rather than a group-level
+		// Use(...) (which would protect every method, including GET),
+		// Auth and RequireRole are passed as extra handlers on each
+		// individual POST/PUT/DELETE route — gin runs them in order
+		// before the final handler, same as group middleware would,
+		// just scoped to one route instead of everything under a group.
+		categories := v1.Group("/categories")
+		{
+			categories.GET("", h.Category.List)
+			categories.GET("/slug/:slug", h.Category.GetBySlug)
+			categories.GET("/:id", h.Category.GetByID)
+
+			categories.POST("", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Category.Create)
+			categories.PUT("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Category.Update)
+			categories.DELETE("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Category.Delete)
+		}
+
+		brands := v1.Group("/brands")
+		{
+			brands.GET("", h.Brand.List)
+			brands.GET("/slug/:slug", h.Brand.GetBySlug)
+			brands.GET("/:id", h.Brand.GetByID)
+
+			brands.POST("", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Brand.Create)
+			brands.PUT("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Brand.Update)
+			brands.DELETE("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Brand.Delete)
 		}
 	}
 

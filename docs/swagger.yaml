@@ -25,6 +25,40 @@ definitions:
       user:
         $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.UserResponse'
     type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.BrandResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      logo_url:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.CategoryResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      parent_id:
+        type: string
+      slug:
+        type: string
+    type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.ChangePasswordRequest:
     properties:
       current_password:
@@ -35,6 +69,50 @@ definitions:
     required:
     - current_password
     - new_password
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.CreateBrandRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      logo_url:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 150
+        minLength: 2
+        type: string
+      slug:
+        maxLength: 170
+        type: string
+    required:
+    - name
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.CreateCategoryRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      name:
+        maxLength: 150
+        minLength: 2
+        type: string
+      parent_id:
+        type: string
+      slug:
+        maxLength: 170
+        type: string
+    required:
+    - name
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.DashboardResponse:
+    properties:
+      active_users:
+        type: integer
+      blocked_users:
+        type: integer
+      total_users:
+        type: integer
     type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.LoginRequest:
     properties:
@@ -54,6 +132,51 @@ definitions:
         type: string
     required:
     - refresh_token
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_BrandResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.BrandResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_CategoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CategoryResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_UserResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.UserResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.RefreshTokenRequest:
     properties:
@@ -86,6 +209,45 @@ definitions:
     - first_name
     - last_name
     - password
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.UpdateBrandRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      is_active:
+        type: boolean
+      logo_url:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 150
+        minLength: 2
+        type: string
+      slug:
+        maxLength: 170
+        type: string
+    required:
+    - name
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.UpdateCategoryRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 150
+        minLength: 2
+        type: string
+      parent_id:
+        type: string
+      slug:
+        maxLength: 170
+        type: string
+    required:
+    - name
     type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.UpdateProfileRequest:
     properties:
@@ -153,6 +315,159 @@ info:
   title: E-commerce API
   version: "1.0"
 paths:
+  /admin/dashboard:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "403":
+          description: caller is not an admin
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Admin dashboard summary
+      tags:
+      - admin
+  /admin/users:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - admin
+  /admin/users/{id}:
+    delete:
+      description: Soft-deletes the account and revokes all its refresh tokens.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+        "400":
+          description: cannot delete your own account
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a user
+      tags:
+      - admin
+  /admin/users/{id}/block:
+    post:
+      description: Deactivates the account and revokes all its refresh tokens. An
+        access token already issued to that user stays valid until it expires (up
+        to 15 minutes) — see the code comment on AdminService.BlockUser for why.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+        "400":
+          description: cannot block your own account
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Block a user
+      tags:
+      - admin
+  /admin/users/{id}/unblock:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unblock a user
+      tags:
+      - admin
   /auth/login:
     post:
       consumes:
@@ -293,6 +608,375 @@ paths:
       summary: Register a new account
       tags:
       - auth
+  /brands:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_BrandResponse'
+              type: object
+      summary: List brands
+      tags:
+      - brands
+    post:
+      consumes:
+      - application/json
+      description: Admin only. If slug is omitted, it's generated from name.
+      parameters:
+      - description: Brand payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CreateBrandRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.BrandResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "409":
+          description: slug already in use
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a brand
+      tags:
+      - brands
+  /brands/{id}:
+    delete:
+      description: Admin only. Soft-deletes the brand.
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a brand
+      tags:
+      - brands
+    get:
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.BrandResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: Get a brand by ID
+      tags:
+      - brands
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Full replace — every field is overwritten with the
+        request body.
+      parameters:
+      - description: Brand ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Brand payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.UpdateBrandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.BrandResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a brand
+      tags:
+      - brands
+  /brands/slug/{slug}:
+    get:
+      parameters:
+      - description: Brand slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.BrandResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: Get a brand by slug
+      tags:
+      - brands
+  /categories:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_CategoryResponse'
+              type: object
+      summary: List categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Admin only. If slug is omitted, it's generated from name.
+      parameters:
+      - description: Category payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CategoryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "409":
+          description: slug already in use
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a category
+      tags:
+      - categories
+  /categories/{id}:
+    delete:
+      description: Admin only. Soft-deletes the category; any child categories are
+        promoted to top-level.
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a category
+      tags:
+      - categories
+    get:
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CategoryResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: Get a category by ID
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Full replace — every field is overwritten with the
+        request body.
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Category payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CategoryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a category
+      tags:
+      - categories
+  /categories/slug/{slug}:
+    get:
+      parameters:
+      - description: Category slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CategoryResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: Get a category by slug
+      tags:
+      - categories
   /users/me:
     delete:
       description: Soft-deletes the account and revokes every session. This cannot

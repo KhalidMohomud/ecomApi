@@ -82,8 +82,38 @@ func (f *fakeUserRepository) Delete(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (f *fakeUserRepository) List(_ context.Context, _, _ int) ([]entity.User, int64, error) {
-	return nil, 0, nil
+// List gives a real (if unsorted, since Go map iteration order is
+// randomized) paginated slice — enough to test that AdminService
+// correctly forwards offset/limit and computes total pages, without
+// needing to assert on a specific row order.
+func (f *fakeUserRepository) List(_ context.Context, offset, limit int) ([]entity.User, int64, error) {
+	total := int64(len(f.byID))
+
+	all := make([]entity.User, 0, len(f.byID))
+	for _, u := range f.byID {
+		all = append(all, *u)
+	}
+
+	if offset >= len(all) {
+		return []entity.User{}, total, nil
+	}
+	end := offset + limit
+	if end > len(all) {
+		end = len(all)
+	}
+	return all[offset:end], total, nil
+}
+
+func (f *fakeUserRepository) Stats(_ context.Context) (*entity.UserStats, error) {
+	stats := &entity.UserStats{Total: int64(len(f.byID))}
+	for _, u := range f.byID {
+		if u.IsActive {
+			stats.Active++
+		} else {
+			stats.Blocked++
+		}
+	}
+	return stats, nil
 }
 
 type fakeRefreshTokenRepository struct {

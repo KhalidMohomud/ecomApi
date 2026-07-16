@@ -31,6 +31,8 @@ type UserRepository interface {
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, offset, limit int) ([]entity.User, int64, error)
+	// Stats returns aggregate counts for the admin dashboard.
+	Stats(ctx context.Context) (*entity.UserStats, error)
 }
 
 // userRepository is the GORM/PostgreSQL implementation of
@@ -133,4 +135,22 @@ func (r *userRepository) List(ctx context.Context, offset, limit int) ([]entity.
 	}
 
 	return users, total, nil
+}
+
+// Stats computes user counts in a single query using Postgres's
+// FILTER clause (COUNT(*) FILTER (WHERE ...)) rather than three
+// separate round trips. GORM's soft-delete scope still applies here
+// exactly as it does to Find/First — Model(&entity.User{}) is what
+// tells GORM which model's callbacks (including the deleted_at IS
+// NULL filter) to attach to this query.
+func (r *userRepository) Stats(ctx context.Context) (*entity.UserStats, error) {
+	var stats entity.UserStats
+	err := r.db.WithContext(ctx).
+		Model(&entity.User{}).
+		Select("COUNT(*) AS total, COUNT(*) FILTER (WHERE is_active) AS active, COUNT(*) FILTER (WHERE NOT is_active) AS blocked").
+		Scan(&stats).Error
+	if err != nil {
+		return nil, fmt.Errorf("user stats: %w", err)
+	}
+	return &stats, nil
 }
