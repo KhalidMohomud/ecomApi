@@ -40,4 +40,19 @@ var (
 	// database rejected something," so this is a service error, not
 	// a repository one.
 	ErrInvalidParentCategory = errors.New("invalid parent category")
+
+	// ErrCategoryHasProducts blocks deleting a category that still
+	// has products in it. Unlike a category's own parent_id (nullable
+	// — a deleted parent's children get promoted to top-level, see
+	// CategoryRepository.Delete), a product's category_id is NOT
+	// NULL: there is no "promote to null" option, so the only sane
+	// choices are refuse the delete or cascade-delete the products.
+	// Silently destroying products because someone deleted their
+	// category is far more dangerous than making the admin reassign
+	// or remove them first, so this refuses.
+	ErrCategoryHasProducts = errors.New("category still has products assigned to it")
+
+	// ErrInvalidBrand mirrors ErrInvalidParentCategory: the given
+	// brand_id was supplied on a product but doesn't exist.
+	ErrInvalidBrand = errors.New("invalid brand")
 )

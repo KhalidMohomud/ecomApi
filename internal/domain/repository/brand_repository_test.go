@@ -57,3 +57,35 @@ func TestBrandRepository_DuplicateSlugReturnsConflict(t *testing.T) {
 	err := repo.Create(ctx, second)
 	require.ErrorIs(t, err, entity.ErrConflict)
 }
+
+func TestBrandRepository_DeletingBrandClearsProductBrandID(t *testing.T) {
+	db := testDB(t)
+	brandRepo := repository.NewBrandRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+	productRepo := repository.NewProductRepository(db)
+	ctx := context.Background()
+
+	category := &entity.Category{Name: "Shoes", Slug: uniqueSlug("shoes")}
+	require.NoError(t, categoryRepo.Create(ctx, category))
+	t.Cleanup(func() { _ = categoryRepo.Delete(ctx, category.ID) })
+
+	brand := &entity.Brand{Name: "Nike", Slug: uniqueSlug("nike")}
+	require.NoError(t, brandRepo.Create(ctx, brand))
+
+	product := &entity.Product{
+		Name:       "Air Max",
+		Slug:       uniqueSlug("air-max"),
+		SKU:        uniqueSlug("sku"),
+		PriceCents: 12999,
+		CategoryID: category.ID,
+		BrandID:    &brand.ID,
+	}
+	require.NoError(t, productRepo.Create(ctx, product))
+	t.Cleanup(func() { _ = productRepo.Delete(ctx, product.ID) })
+
+	require.NoError(t, brandRepo.Delete(ctx, brand.ID))
+
+	fetched, err := productRepo.GetByID(ctx, product.ID)
+	require.NoError(t, err)
+	require.Nil(t, fetched.BrandID, "product's brand_id should be cleared, not left dangling, when the brand is deleted")
+}

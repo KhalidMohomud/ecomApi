@@ -23,10 +23,11 @@ type CategoryService interface {
 
 type categoryService struct {
 	categoryRepo repository.CategoryRepository
+	productRepo  repository.ProductRepository
 }
 
-func NewCategoryService(categoryRepo repository.CategoryRepository) CategoryService {
-	return &categoryService{categoryRepo: categoryRepo}
+func NewCategoryService(categoryRepo repository.CategoryRepository, productRepo repository.ProductRepository) CategoryService {
+	return &categoryService{categoryRepo: categoryRepo, productRepo: productRepo}
 }
 
 func (s *categoryService) Create(ctx context.Context, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error) {
@@ -86,7 +87,26 @@ func (s *categoryService) Update(ctx context.Context, id uuid.UUID, req dto.Upda
 	return &resp, nil
 }
 
+// Delete refuses to remove a category that still has products
+// assigned to it. This check has to live here, in the service, not
+// as a database constraint alone: the migration's `category_id ...
+// ON DELETE RESTRICT` only fires on a real SQL DELETE, and this
+// repository's Delete is a soft delete (an UPDATE) — the same "soft
+// delete bypasses FK actions" fact that motivated
+// CategoryRepository.Delete's child-promotion transaction and
+// BrandRepository.Delete's brand_id cleanup. Here there's no
+// "cleanup" option: a product's category_id is NOT NULL, so the only
+// choice is to block the delete and make the admin reassign or
+// remove those products first.
 func (s *categoryService) Delete(ctx context.Context, id uuid.UUID) error {
+	hasProducts, err := s.productRepo.ExistsByCategoryID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("delete category: %w", err)
+	}
+	if hasProducts {
+		return ErrCategoryHasProducts
+	}
+
 	if err := s.categoryRepo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("delete category: %w", err)
 	}

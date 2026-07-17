@@ -69,15 +69,36 @@ func (r *brandRepository) Update(ctx context.Context, brand *entity.Brand) error
 	return nil
 }
 
+// Delete soft-deletes a brand and, in the same transaction, clears
+// brand_id on any product that referenced it.
+//
+// This is the same fix as CategoryRepository.Delete's child
+// promotion, applied for the same reason: the migration's `brand_id
+// ... ON DELETE SET NULL` only fires on a real SQL DELETE, and this
+// is a soft delete (an UPDATE), so that FK action never triggers.
+// Unlike a category (which a product MUST belong to — see
+// CategoryService.Delete, which refuses to delete a category with
+// products at all), a brand is optional on a product, so silently
+// clearing the reference here is the correct behavior rather than
+// blocking the delete.
 func (r *brandRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result := r.db.WithContext(ctx).Delete(&entity.Brand{}, "id = ?", id)
-	if result.Error != nil {
-		return fmt.Errorf("delete brand: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("delete brand: %w", entity.ErrNotFound)
-	}
-	return nil
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(&entity.Brand{}, "id = ?", id)
+		if result.Error != nil {
+			return fmt.Errorf("delete brand: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("delete brand: %w", entity.ErrNotFound)
+		}
+
+		if err := tx.Model(&entity.Product{}).
+			Where("brand_id = ?", id).
+			Update("brand_id", nil).Error; err != nil {
+			return fmt.Errorf("delete brand: clearing product references: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (r *brandRepository) List(ctx context.Context, offset, limit int) ([]entity.Brand, int64, error) {
