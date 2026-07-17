@@ -1,0 +1,29 @@
+# Never bake real secrets into an image layer — anyone who can pull
+# the image (or an earlier layer, since layers persist in the image
+# history even if a later layer deletes the file) can read them back
+# out. Secrets belong in environment variables injected at container
+# start (docker run -e / docker-compose environment: / your host's
+# secret manager), never copied in at build time.
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+
+# Local dev artifacts — irrelevant inside the image and would bloat
+# the build context sent to the Docker daemon.
+bin/
+tmp/
+*.log
+
+.vscode
+.idea
+.DS_Store
+
+# Markdown/docs are for humans reading the repo, not the running
+# container. docs/ (the swag-generated Go package: docs.go,
+# swagger.json, swagger.yaml) is NOT listed here — that one is real
+# Go source the binary is compiled from, and must stay in the build
+# context.
+README.md

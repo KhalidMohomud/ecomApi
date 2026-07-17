@@ -8,7 +8,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -47,21 +49,23 @@ type AuthConfig struct {
 // Load reads configuration from environment variables (optionally
 // populated from a .env file) and returns a validated Config.
 //
-// envFile is the path to a .env file to load, e.g. ".env". Pass ""
-// to skip loading a file and rely purely on real environment
-// variables (this is what you want in production/Docker, where
-// secrets are injected by the platform, not a file).
+// envFile is the path to a .env file to load, e.g. ".env". Passing ""
+// skips file loading outright and relies purely on real environment
+// variables. Passing a real path (the normal case — main.go always
+// calls Load(".env")) is safe even when that file doesn't exist: a
+// missing file is expected outside local development, since a
+// container or a real deployment sets environment variables directly
+// instead of shipping a file, and .env is deliberately excluded from
+// what gets built into the Docker image (see .dockerignore) so a
+// secret never ends up baked into an image layer. Only a file that
+// exists but fails to parse is treated as fatal — that indicates a
+// real local misconfiguration worth stopping for.
 func Load(envFile string) (*Config, error) {
 	// godotenv.Load reads KEY=VALUE lines from the given file and
 	// injects them into the process environment (os.Setenv), as if
 	// you had exported them in your shell before running the app.
-	//
-	// We only do this for local development. In production there is
-	// no .env file on disk — the platform (Docker, Railway, etc.)
-	// sets real environment variables instead, so a missing file
-	// here is not an error.
 	if envFile != "" {
-		if err := godotenv.Load(envFile); err != nil {
+		if err := godotenv.Load(envFile); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("config: loading env file %q: %w", envFile, err)
 		}
 	}
