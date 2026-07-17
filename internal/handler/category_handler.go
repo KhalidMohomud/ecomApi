@@ -196,6 +196,8 @@ func (h *CategoryHandler) handleCategoryError(c *gin.Context, err error) {
 		utils.Error(c, http.StatusConflict, "A category with this slug already exists", nil)
 	case errors.Is(err, service.ErrInvalidParentCategory):
 		utils.Error(c, http.StatusBadRequest, "Invalid parent category", nil)
+	case errors.Is(err, service.ErrCategoryHasProducts):
+		utils.Error(c, http.StatusBadRequest, "Category still has products assigned to it", nil)
 	default:
 		slog.Error("category handler: unhandled error", "error", err)
 		utils.Error(c, http.StatusInternalServerError, "Something went wrong", nil)

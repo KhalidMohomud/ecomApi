@@ -45,6 +45,17 @@ type UpdateProductRequest struct {
 // way every other list endpoint does, adding the filter/search/sort
 // parameters specific to products.
 //
+// CategoryID and BrandID are plain strings here, not *uuid.UUID.
+// Gin's query/form binding only converts into primitive kinds
+// (string, the numeric types, bool) — it does not know how to
+// populate a custom struct type like uuid.UUID from a query string,
+// even though uuid.UUID implements encoding.TextUnmarshaler and JSON
+// body binding (c.ShouldBindJSON, used everywhere else in this
+// project) handles that case fine. The `uuid` validator tag still
+// gives us the same 400-on-malformed-input behavior; the actual
+// string-to-uuid.UUID conversion happens in ProductService.List,
+// right before building the repository filter.
+//
 // Sort uses `oneof` to reject anything outside the fixed set of
 // values before it ever reaches the service or repository layer.
 // That's a second line of defense on top of (not a replacement for)
@@ -54,9 +65,9 @@ type UpdateProductRequest struct {
 type ProductListQuery struct {
 	PaginationQuery
 
-	CategoryID    *uuid.UUID `form:"category_id"`
-	BrandID       *uuid.UUID `form:"brand_id"`
-	MinPriceCents *int64     `form:"min_price_cents" binding:"omitempty,min=0"`
+	CategoryID    string `form:"category_id" binding:"omitempty,uuid"`
+	BrandID       string `form:"brand_id" binding:"omitempty,uuid"`
+	MinPriceCents *int64 `form:"min_price_cents" binding:"omitempty,min=0"`
 	MaxPriceCents *int64     `form:"max_price_cents" binding:"omitempty,min=0"`
 	Search        string     `form:"search" binding:"omitempty,max=200"`
 	Sort          string     `form:"sort" binding:"omitempty,oneof=newest oldest price_asc price_desc name_asc name_desc"`

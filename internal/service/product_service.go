@@ -125,12 +125,32 @@ func (s *productService) GetBySlug(ctx context.Context, slug string) (*dto.Produ
 
 func (s *productService) List(ctx context.Context, query dto.ProductListQuery) (*dto.PaginatedResponse[dto.ProductResponse], error) {
 	filter := repository.ProductFilter{
-		CategoryID:    query.CategoryID,
-		BrandID:       query.BrandID,
 		MinPriceCents: query.MinPriceCents,
 		MaxPriceCents: query.MaxPriceCents,
 		Search:        query.Search,
 		Sort:          repository.ProductSort(query.Sort),
+	}
+
+	// query.CategoryID/BrandID are already known-valid UUID strings
+	// (or empty) by the time they get here — the `uuid` binding tag
+	// on dto.ProductListQuery rejected anything malformed before the
+	// handler ever called this method. uuid.Parse can't meaningfully
+	// fail below; it's still checked rather than using MustParse
+	// because "can't happen" is a claim about today's callers, not a
+	// guarantee the compiler enforces.
+	if query.CategoryID != "" {
+		id, err := uuid.Parse(query.CategoryID)
+		if err != nil {
+			return nil, fmt.Errorf("list products: parsing category_id: %w", err)
+		}
+		filter.CategoryID = &id
+	}
+	if query.BrandID != "" {
+		id, err := uuid.Parse(query.BrandID)
+		if err != nil {
+			return nil, fmt.Errorf("list products: parsing brand_id: %w", err)
+		}
+		filter.BrandID = &id
 	}
 
 	products, total, err := s.productRepo.List(ctx, filter, query.Offset(), query.PageSize)
