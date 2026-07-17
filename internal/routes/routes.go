@@ -27,6 +27,7 @@ type Handlers struct {
 	Admin    *handler.AdminHandler
 	Category *handler.CategoryHandler
 	Brand    *handler.BrandHandler
+	Product  *handler.ProductHandler
 }
 
 // SetupRouter builds the fully wired Gin engine: global middleware,
@@ -123,6 +124,17 @@ func SetupRouter(cfg *config.Config, tokenManager *utils.TokenManager, h Handler
 			brands.POST("", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Brand.Create)
 			brands.PUT("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Brand.Update)
 			brands.DELETE("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Brand.Delete)
+		}
+
+		products := v1.Group("/products")
+		{
+			products.GET("", h.Product.List)
+			products.GET("/slug/:slug", h.Product.GetBySlug)
+			products.GET("/:id", h.Product.GetByID)
+
+			products.POST("", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Product.Create)
+			products.PUT("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Product.Update)
+			products.DELETE("/:id", middleware.Auth(tokenManager), middleware.RequireRole(entity.RoleAdmin), h.Product.Delete)
 		}
 	}
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/KhalidMohomud/ecomApi/internal/domain/entity"
+	"github.com/KhalidMohomud/ecomApi/internal/domain/repository"
 	"github.com/google/uuid"
 )
 
@@ -163,4 +164,102 @@ func (f *fakeBrandRepository) List(_ context.Context, offset, limit int) ([]enti
 		end = len(all)
 	}
 	return all[offset:end], total, nil
+}
+
+// fakeProductRepository is deliberately the simplest fake in this
+// file: its List does NOT replicate ProductRepository's filtering,
+// search, or sorting logic (that's real SQL behavior, proven by
+// product_repository_test.go against a real database instead — see
+// the package comment on user_repository_test.go for why). It just
+// returns everything, paginated, so ProductService tests can verify
+// the service layer's own responsibilities: slug generation,
+// category/brand validation, and correctly forwarding query
+// parameters — without needing SQL semantics to make those
+// assertions.
+type fakeProductRepository struct {
+	byID   map[uuid.UUID]*entity.Product
+	bySlug map[string]*entity.Product
+	bySKU  map[string]*entity.Product
+}
+
+func newFakeProductRepository() *fakeProductRepository {
+	return &fakeProductRepository{
+		byID:   make(map[uuid.UUID]*entity.Product),
+		bySlug: make(map[string]*entity.Product),
+		bySKU:  make(map[string]*entity.Product),
+	}
+}
+
+func (f *fakeProductRepository) Create(_ context.Context, p *entity.Product) error {
+	if _, exists := f.bySlug[p.Slug]; exists {
+		return fmt.Errorf("create product: %w", entity.ErrConflict)
+	}
+	if _, exists := f.bySKU[p.SKU]; exists {
+		return fmt.Errorf("create product: %w", entity.ErrConflict)
+	}
+	p.ID = uuid.New()
+	p.CreatedAt = time.Now()
+	f.byID[p.ID] = p
+	f.bySlug[p.Slug] = p
+	f.bySKU[p.SKU] = p
+	return nil
+}
+
+func (f *fakeProductRepository) GetByID(_ context.Context, id uuid.UUID) (*entity.Product, error) {
+	p, ok := f.byID[id]
+	if !ok {
+		return nil, fmt.Errorf("get product by id: %w", entity.ErrNotFound)
+	}
+	return p, nil
+}
+
+func (f *fakeProductRepository) GetBySlug(_ context.Context, slug string) (*entity.Product, error) {
+	p, ok := f.bySlug[slug]
+	if !ok {
+		return nil, fmt.Errorf("get product by slug: %w", entity.ErrNotFound)
+	}
+	return p, nil
+}
+
+func (f *fakeProductRepository) Update(_ context.Context, p *entity.Product) error {
+	f.byID[p.ID] = p
+	f.bySlug[p.Slug] = p
+	f.bySKU[p.SKU] = p
+	return nil
+}
+
+func (f *fakeProductRepository) Delete(_ context.Context, id uuid.UUID) error {
+	p, ok := f.byID[id]
+	if !ok {
+		return fmt.Errorf("delete product: %w", entity.ErrNotFound)
+	}
+	delete(f.byID, id)
+	delete(f.bySlug, p.Slug)
+	delete(f.bySKU, p.SKU)
+	return nil
+}
+
+func (f *fakeProductRepository) List(_ context.Context, _ repository.ProductFilter, offset, limit int) ([]entity.Product, int64, error) {
+	total := int64(len(f.byID))
+	all := make([]entity.Product, 0, len(f.byID))
+	for _, p := range f.byID {
+		all = append(all, *p)
+	}
+	if offset >= len(all) {
+		return []entity.Product{}, total, nil
+	}
+	end := offset + limit
+	if end > len(all) {
+		end = len(all)
+	}
+	return all[offset:end], total, nil
+}
+
+func (f *fakeProductRepository) ExistsByCategoryID(_ context.Context, categoryID uuid.UUID) (bool, error) {
+	for _, p := range f.byID {
+		if p.CategoryID == categoryID {
+			return true, nil
+		}
+	}
+	return false, nil
 }

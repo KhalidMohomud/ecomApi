@@ -52,7 +52,15 @@ var (
 	// or remove them first, so this refuses.
 	ErrCategoryHasProducts = errors.New("category still has products assigned to it")
 
-	// ErrInvalidBrand mirrors ErrInvalidParentCategory: the given
-	// brand_id was supplied on a product but doesn't exist.
+	// ErrInvalidCategory covers a product's category_id not pointing
+	// at a real category. Deliberately distinct from
+	// ErrInvalidParentCategory, which is specifically about a
+	// category's own self-referencing parent_id — conflating the two
+	// would make an error message about a product read as if it were
+	// about category hierarchy.
+	ErrInvalidCategory = errors.New("invalid category")
+
+	// ErrInvalidBrand mirrors ErrInvalidCategory: the given brand_id
+	// was supplied on a product but doesn't exist.
 	ErrInvalidBrand = errors.New("invalid brand")
 )

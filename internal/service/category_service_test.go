@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/KhalidMohomud/ecomApi/internal/domain/entity"
 	"github.com/KhalidMohomud/ecomApi/internal/dto"
 	"github.com/KhalidMohomud/ecomApi/internal/service"
 	"github.com/google/uuid"
@@ -12,7 +13,7 @@ import (
 
 func newTestCategoryService() (*fakeCategoryRepository, service.CategoryService) {
 	repo := newFakeCategoryRepository()
-	return repo, service.NewCategoryService(repo)
+	return repo, service.NewCategoryService(repo, newFakeProductRepository())
 }
 
 func TestCategoryService_Create_AutoGeneratesSlugFromName(t *testing.T) {
@@ -95,4 +96,33 @@ func TestCategoryService_List_Pagination(t *testing.T) {
 	require.Len(t, resp.Items, 2)
 	require.Equal(t, int64(3), resp.Total)
 	require.Equal(t, 2, resp.TotalPages)
+}
+
+func TestCategoryService_Delete_BlockedWhenCategoryHasProducts(t *testing.T) {
+	categoryRepo := newFakeCategoryRepository()
+	productRepo := newFakeProductRepository()
+	svc := service.NewCategoryService(categoryRepo, productRepo)
+	ctx := context.Background()
+
+	category, err := svc.Create(ctx, dto.CreateCategoryRequest{Name: "Electronics"})
+	require.NoError(t, err)
+
+	product := &entity.Product{Name: "Phone", Slug: "phone", SKU: "sku-1", PriceCents: 1000, CategoryID: category.ID}
+	require.NoError(t, productRepo.Create(ctx, product))
+
+	err = svc.Delete(ctx, category.ID)
+
+	require.ErrorIs(t, err, service.ErrCategoryHasProducts)
+}
+
+func TestCategoryService_Delete_SucceedsWhenCategoryHasNoProducts(t *testing.T) {
+	categoryRepo := newFakeCategoryRepository()
+	productRepo := newFakeProductRepository()
+	svc := service.NewCategoryService(categoryRepo, productRepo)
+	ctx := context.Background()
+
+	category, err := svc.Create(ctx, dto.CreateCategoryRequest{Name: "Electronics"})
+	require.NoError(t, err)
+
+	require.NoError(t, svc.Delete(ctx, category.ID))
 }

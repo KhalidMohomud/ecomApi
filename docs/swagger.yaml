@@ -105,6 +105,34 @@ definitions:
     required:
     - name
     type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.CreateProductRequest:
+    properties:
+      brand_id:
+        type: string
+      category_id:
+        type: string
+      description:
+        maxLength: 5000
+        type: string
+      name:
+        maxLength: 200
+        minLength: 2
+        type: string
+      price_cents:
+        type: integer
+      sku:
+        maxLength: 64
+        minLength: 1
+        type: string
+      slug:
+        maxLength: 220
+        type: string
+    required:
+    - category_id
+    - name
+    - price_cents
+    - sku
+    type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.DashboardResponse:
     properties:
       active_users:
@@ -163,6 +191,21 @@ definitions:
       total_pages:
         type: integer
     type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_ProductResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.ProductResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_UserResponse:
     properties:
       items:
@@ -177,6 +220,37 @@ definitions:
         type: integer
       total_pages:
         type: integer
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.ProductResponse:
+    properties:
+      brand_id:
+        type: string
+      category_id:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+      price_cents:
+        description: |-
+          PriceCents is the authoritative value — exactly what's stored,
+          safe to do further arithmetic on. Price is a derived
+          convenience for clients that just want to display a number;
+          it's computed fresh on every response, never stored or parsed
+          from a request.
+        type: integer
+      sku:
+        type: string
+      slug:
+        type: string
     type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.RefreshTokenRequest:
     properties:
@@ -248,6 +322,36 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  github_com_KhalidMohomud_ecomApi_internal_dto.UpdateProductRequest:
+    properties:
+      brand_id:
+        type: string
+      category_id:
+        type: string
+      description:
+        maxLength: 5000
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 200
+        minLength: 2
+        type: string
+      price_cents:
+        type: integer
+      sku:
+        maxLength: 64
+        minLength: 1
+        type: string
+      slug:
+        maxLength: 220
+        type: string
+    required:
+    - category_id
+    - name
+    - price_cents
+    - sku
     type: object
   github_com_KhalidMohomud_ecomApi_internal_dto.UpdateProfileRequest:
     properties:
@@ -977,6 +1081,219 @@ paths:
       summary: Get a category by slug
       tags:
       - categories
+  /products:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by brand ID
+        in: query
+        name: brand_id
+        type: string
+      - description: Minimum price, in cents
+        in: query
+        name: min_price_cents
+        type: integer
+      - description: Maximum price, in cents
+        in: query
+        name: max_price_cents
+        type: integer
+      - description: Case-insensitive substring match on name/description
+        in: query
+        name: search
+        type: string
+      - description: newest, oldest, price_asc, price_desc, name_asc, name_desc
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.PaginatedResponse-github_com_KhalidMohomud_ecomApi_internal_dto_ProductResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: List / search / filter products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Admin only. If slug is omitted, it's generated from name. price_cents
+        is an integer — $19.99 is 1999, never a float.
+      parameters:
+      - description: Product payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.ProductResponse'
+              type: object
+        "400":
+          description: validation failed, or category/brand does not exist
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "409":
+          description: slug or SKU already in use
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a product
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      description: Admin only. Soft-deletes the product.
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a product
+      tags:
+      - products
+    get:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.ProductResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: Get a product by ID
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Full replace — every field is overwritten with the
+        request body.
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Product payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.ProductResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a product
+      tags:
+      - products
+  /products/slug/{slug}:
+    get:
+      parameters:
+      - description: Product slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_dto.ProductResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_KhalidMohomud_ecomApi_internal_utils.ErrorResponse'
+      summary: Get a product by slug
+      tags:
+      - products
   /users/me:
     delete:
       description: Soft-deletes the account and revokes every session. This cannot

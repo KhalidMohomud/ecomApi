@@ -82,20 +82,23 @@ func run() error {
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	brandRepo := repository.NewBrandRepository(db)
+	productRepo := repository.NewProductRepository(db)
 
 	tokenManager := utils.NewTokenManager(cfg.Auth.JWTSecret, cfg.Auth.AccessTokenTTL)
 
 	authService := service.NewAuthService(userRepo, refreshTokenRepo, tokenManager, cfg.Auth.RefreshTokenTTL)
 	userService := service.NewUserService(userRepo, refreshTokenRepo)
 	adminService := service.NewAdminService(userRepo, refreshTokenRepo)
-	categoryService := service.NewCategoryService(categoryRepo)
+	categoryService := service.NewCategoryService(categoryRepo, productRepo)
 	brandService := service.NewBrandService(brandRepo)
+	productService := service.NewProductService(productRepo, categoryRepo, brandRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
 	adminHandler := handler.NewAdminHandler(adminService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	brandHandler := handler.NewBrandHandler(brandService)
+	productHandler := handler.NewProductHandler(productService)
 
 	router := routes.SetupRouter(cfg, tokenManager, routes.Handlers{
 		Auth:     authHandler,
@@ -103,6 +106,7 @@ func run() error {
 		Admin:    adminHandler,
 		Category: categoryHandler,
 		Brand:    brandHandler,
+		Product:  productHandler,
 	})
 
 	srv := &http.Server{
